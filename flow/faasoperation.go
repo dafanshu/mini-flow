@@ -2,6 +2,7 @@ package flow
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -77,7 +78,7 @@ func (operation *FaasOperation) GetProperties() map[string][]string {
 	return result
 }
 
-func (operation *FaasOperation) Execute(data []byte, option map[string]interface{}) ([]byte, error) {
+func (operation *FaasOperation) Execute(ctx context.Context, data []byte, option map[string]interface{}) ([]byte, error) {
 	var result []byte
 	var err error
 
@@ -89,7 +90,7 @@ func (operation *FaasOperation) Execute(data []byte, option map[string]interface
 	case operation.Function != "":
 		fmt.Printf("[Request `%s`] Executing function `%s`\n",
 			reqId, operation.Function)
-		result, err = executeFunction(gateway, operation, data)
+		result, err = executeFunction(ctx, gateway, operation, data)
 		if err != nil {
 			err = fmt.Errorf("Function(%s), error: function execution failed, %v",
 				operation.Function, err)
@@ -105,7 +106,7 @@ func (operation *FaasOperation) Execute(data []byte, option map[string]interface
 	case operation.HttpRequestUrl != "":
 		fmt.Printf("[Request `%s`] Executing httpRequest `%s`\n",
 			reqId, operation.HttpRequestUrl)
-		result, err = executeHttpRequest(operation, data)
+		result, err = executeHttpRequest(ctx, operation, data)
 		if err != nil {
 			err = fmt.Errorf("HttpRequest(%s), error: httpRequest failed, %v",
 				operation.HttpRequestUrl, err)
@@ -129,6 +130,13 @@ func (operation *FaasOperation) Execute(data []byte, option map[string]interface
 		}
 		if result == nil {
 			result = []byte("")
+		}
+		select {
+		case <-ctx.Done():
+			fmt.Printf("Why? %s\n", ctx.Err())
+			return nil, ctx.Err()
+		default:
+
 		}
 	}
 
@@ -210,7 +218,7 @@ func buildHttpRequest(url string, method string, data []byte, params map[string]
 }
 
 // executeFunction executes a function call
-func executeFunction(gateway string, operation *FaasOperation, data []byte) ([]byte, error) {
+func executeFunction(ctx context.Context, gateway string, operation *FaasOperation, data []byte) ([]byte, error) {
 	var err error
 	var result []byte
 
@@ -241,7 +249,7 @@ func executeFunction(gateway string, operation *FaasOperation, data []byte) ([]b
 	}
 
 	client := &http.Client{}
-	resp, err := client.Do(httpReq)
+	resp, err := client.Do(httpReq.WithContext(ctx))
 	if err != nil {
 		return []byte{}, err
 	}
@@ -262,7 +270,7 @@ func executeFunction(gateway string, operation *FaasOperation, data []byte) ([]b
 }
 
 // executeHttpRequest executes a httpRequest
-func executeHttpRequest(operation *FaasOperation, data []byte) ([]byte, error) {
+func executeHttpRequest(ctx context.Context, operation *FaasOperation, data []byte) ([]byte, error) {
 	var err error
 	var result []byte
 
@@ -291,7 +299,7 @@ func executeHttpRequest(operation *FaasOperation, data []byte) ([]byte, error) {
 	}
 
 	client := &http.Client{}
-	resp, err := client.Do(httpReq)
+	resp, err := client.Do(httpReq.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}

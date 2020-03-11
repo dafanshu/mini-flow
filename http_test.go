@@ -1,6 +1,7 @@
 package workflow_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -62,7 +63,7 @@ func TestHttp(t *testing.T) {
 	jsdata.Set("request-id", "yurui")
 	request, _ := jsdata.MarshalJSON()
 
-	executor := flow.FlowExecutor{Flow: workflow}
+	executor := flow.FlowExecutor{Flow: workflow, Ctx: context.TODO()}
 	result, err := executor.ExecuteFlow(request)
 
 	assert.Equal(t, err, nil)

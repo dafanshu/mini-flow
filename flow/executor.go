@@ -18,7 +18,7 @@ var wg sync.WaitGroup
 
 type FlowExecutor struct {
 	Flow *Workflow
-	Ctx context.Context
+	Ctx  context.Context
 }
 
 type RawRequest struct {
@@ -65,14 +65,6 @@ func worker(ctx context.Context, nodeId string, tasks chan *task, taskReturns ch
 		errs <- err
 		return true
 	}
-	select {
-		case <- ctx.Done():
-			fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-			return
-		default:
-			fmt.Println(">>>>>>>>>>>>>>>>>>>((((((((((((((((>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-	}
-	time.Sleep(10 * time.Second)
 	task, ok := <-tasks
 	if !ok {
 		fmt.Println("Worker: ", nodeId, " : Shutting Down")
@@ -99,9 +91,9 @@ func worker(ctx context.Context, nodeId string, tasks chan *task, taskReturns ch
 	}
 	for _, operation := range task.node.Operations() {
 		if result == nil {
-			result, err = operation.Execute(task.request, task.options)
+			result, err = operation.Execute(ctx, task.request, task.options)
 		} else {
-			result, err = operation.Execute(result, task.options)
+			result, err = operation.Execute(ctx, result, task.options)
 		}
 		if ok := sendErr(err); ok {
 			return
@@ -135,6 +127,11 @@ func (fexec *FlowExecutor) ExecuteFlow(request []byte) ([]byte, error) {
 		options["request-id"] = os.Getenv("request-id")
 	}
 
+	readTimeout := parseIntOrDurationValue(os.Getenv("read_timeout"), 10*time.Second)
+	fmt.Println(readTimeout)
+	workerCtx, workerCancel := context.WithTimeout(fexec.Ctx, readTimeout)
+	defer workerCancel()
+
 	workflow := fexec.Flow
 	for workflow.GetNodeLeft() != 0 {
 		startNodes := workflow.GetStartNodes()
@@ -151,8 +148,6 @@ func (fexec *FlowExecutor) ExecuteFlow(request []byte) ([]byte, error) {
 		for item := startNodes.Front(); nil != item; item = item.Next() {
 			node := item.Value.(*sdk.Node)
 			startNodeIds = append(startNodeIds, node.Id)
-			readTimeout := parseIntOrDurationValue(os.Getenv("read_timeout"), 10*time.Second)
-			workerCtx, _ := context.WithTimeout(fexec.Ctx, readTimeout)
 			go worker(workerCtx, node.Id, taskCh, taskReturnCh, errCh)
 		}
 

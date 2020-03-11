@@ -3,11 +3,11 @@ package workflow_test
 import (
 	"context"
 	"fmt"
-	"testing"
-
 	"github.com/dafanshu/mini-flow/flow"
 	"github.com/dafanshu/simplejson"
 	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
 )
 
 func TestModiferInitData(t *testing.T) {
@@ -110,6 +110,7 @@ func TestReturnJson(t *testing.T) {
 		sub.Set("out_foo_node5", out_foo_node5)
 		sub.Set("out_foo", out_foo)
 
+		time.Sleep(15 * time.Second)
 		result.Set("node_foo", sub)
 		res, _ := result.MarshalJSON()
 		return res, nil
@@ -126,7 +127,7 @@ func TestReturnJson(t *testing.T) {
 	executor := flow.FlowExecutor{Flow: workflow, Ctx: context.TODO()}
 	result, err := executor.ExecuteFlow(request)
 
-	assert.Equal(t, err, nil)
+	assert.Equal(t, nil, err)
 
 	target := `{"node_foo":{"out_foo":"out_bar000","out_foo_node5":{"this":{"a":0.1,"b":"bb","c":"cc"}}}}`
 	assert.Equal(t, target, string(result))
