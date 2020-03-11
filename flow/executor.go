@@ -7,8 +7,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/s8sg/mini-flow/sdk"
-	"github.com/yur/simplejson"
+	"github.com/dafanshu/mini-flow/sdk"
+	"github.com/dafanshu/simplejson"
 )
 
 var wg sync.WaitGroup

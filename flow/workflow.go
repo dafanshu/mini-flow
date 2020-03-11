@@ -2,7 +2,7 @@ package flow
 
 import (
 	"container/list"
-	"github.com/s8sg/mini-flow/sdk"
+	"github.com/dafanshu/mini-flow/sdk"
 )
 
 type Workflow struct {

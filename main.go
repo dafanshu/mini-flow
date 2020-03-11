@@ -3,7 +3,7 @@ package workflow
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/s8sg/mini-flow/flow"
+	"github.com/dafanshu/mini-flow/flow"
 )
 
 func modify(data []byte, add string) []byte {

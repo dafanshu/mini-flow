@@ -2,12 +2,11 @@ package workflow_test
 
 import (
 	"fmt"
-	"github.com/grafana/grafana/pkg/components/simplejson"
-	"github.com/s8sg/mini-flow/flow"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
-	js "github.com/yur/simplejson"
+	"github.com/dafanshu/mini-flow/flow"
+	"github.com/dafanshu/simplejson"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHttp(t *testing.T) {
@@ -58,7 +57,7 @@ func TestHttp(t *testing.T) {
 	dag.Edge("node4", "node6")
 	dag.Edge("node5", "node6")
 
-	jsdata, _ := js.NewJson([]byte(`{}`))
+	jsdata, _ := simplejson.NewJson([]byte(`{}`))
 	jsdata.Set("in_foo", "in_bar")
 	jsdata.Set("request-id", "yurui")
 	request, _ := jsdata.MarshalJSON()
