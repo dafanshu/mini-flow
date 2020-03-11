@@ -1,6 +1,7 @@
 package workflow_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -102,7 +103,7 @@ func TestReturnJson(t *testing.T) {
 
 	dag.Node("node7").Modify(func(data []byte) ([]byte, error) {
 		result, _ := simplejson.NewJson(data)
-		sub := js.New()
+		sub := simplejson.New()
 		out_foo_node5, _ := result.CheckGet("out_foo_node5")
 		out_foo, _ := result.CheckGet("out_foo")
 
@@ -122,7 +123,7 @@ func TestReturnJson(t *testing.T) {
 	jsdata.Set("request-id", "yurui")
 	request, _ := jsdata.MarshalJSON()
 
-	executor := flow.FlowExecutor{Flow: workflow}
+	executor := flow.FlowExecutor{Flow: workflow, Ctx: context.TODO()}
 	result, err := executor.ExecuteFlow(request)
 
 	assert.Equal(t, err, nil)

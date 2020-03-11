@@ -2,10 +2,13 @@ package flow
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/dafanshu/mini-flow/sdk"
 	"github.com/dafanshu/simplejson"
@@ -15,6 +18,7 @@ var wg sync.WaitGroup
 
 type FlowExecutor struct {
 	Flow *Workflow
+	Ctx context.Context
 }
 
 type RawRequest struct {
@@ -36,9 +40,23 @@ type Bolt struct {
 	name  string `json:"name"`
 }
 
-func worker(nodeId string, tasks chan *task, taskReturns chan *simplejson.Json, errs chan error) {
-	defer wg.Done()
+func parseIntOrDurationValue(val string, fallback time.Duration) time.Duration {
+	if len(val) > 0 {
+		parsedVal, parseErr := strconv.Atoi(val)
+		if parseErr == nil && parsedVal >= 0 {
+			return time.Duration(parsedVal) * time.Second
+		}
+	}
 
+	duration, durationErr := time.ParseDuration(val)
+	if durationErr != nil {
+		return fallback
+	}
+	return duration
+}
+
+func worker(ctx context.Context, nodeId string, tasks chan *task, taskReturns chan *simplejson.Json, errs chan error) {
+	defer wg.Done()
 	var sendErr = func(err error) bool {
 		if err == nil {
 			return false
@@ -47,56 +65,60 @@ func worker(nodeId string, tasks chan *task, taskReturns chan *simplejson.Json, 
 		errs <- err
 		return true
 	}
-
-	for {
-		task, ok := <-tasks
-		if !ok {
-			fmt.Println("Worker: ", nodeId, " : Shutting Down")
-			break
-		}
-		var result []byte
-		var err error
-		global, _ := simplejson.NewJson(task.request)
-		input, output := task.node.Offer()
-		if len(input) > 0 {
-			inputMap := simplejson.New()
-			for _, v := range input {
-				if inputv, ok := global.CheckGet(v); ok {
-					inputMap.Set(v, inputv)
-				}
-				if resultv, ok := task.parentResult.CheckGet(v); ok {
-					inputMap.Set(v, resultv)
-				}
+	select {
+		case <- ctx.Done():
+			fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+			return
+		default:
+			fmt.Println(">>>>>>>>>>>>>>>>>>>((((((((((((((((>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+	}
+	time.Sleep(10 * time.Second)
+	task, ok := <-tasks
+	if !ok {
+		fmt.Println("Worker: ", nodeId, " : Shutting Down")
+		return
+	}
+	var result []byte
+	var err error
+	global, _ := simplejson.NewJson(task.request)
+	input, output := task.node.Offer()
+	if len(input) > 0 {
+		inputMap := simplejson.New()
+		for _, v := range input {
+			if inputv, ok := global.CheckGet(v); ok {
+				inputMap.Set(v, inputv)
 			}
-			result, err = inputMap.MarshalJSON()
-			if ok := sendErr(err); ok {
-				return
-			}
-		}
-		for _, operation := range task.node.Operations() {
-			if result == nil {
-				result, err = operation.Execute(task.request, task.options)
-			} else {
-				result, err = operation.Execute(result, task.options)
-			}
-			if ok := sendErr(err); ok {
-				return
+			if resultv, ok := task.parentResult.CheckGet(v); ok {
+				inputMap.Set(v, resultv)
 			}
 		}
-		if result != nil {
-			lastResult := simplejson.New()
-			outputResp, err1 := simplejson.NewJson(result)
-			if ok := sendErr(err1); ok {
-				return
-			}
-			for _, key := range output {
-				if value, ok := outputResp.CheckGet(key); ok {
-					lastResult.Set(key, value)
-				}
-			}
-			taskReturns <- lastResult
+		result, err = inputMap.MarshalJSON()
+		if ok := sendErr(err); ok {
+			return
 		}
-		break
+	}
+	for _, operation := range task.node.Operations() {
+		if result == nil {
+			result, err = operation.Execute(task.request, task.options)
+		} else {
+			result, err = operation.Execute(result, task.options)
+		}
+		if ok := sendErr(err); ok {
+			return
+		}
+	}
+	if result != nil {
+		lastResult := simplejson.New()
+		outputResp, err1 := simplejson.NewJson(result)
+		if ok := sendErr(err1); ok {
+			return
+		}
+		for _, key := range output {
+			if value, ok := outputResp.CheckGet(key); ok {
+				lastResult.Set(key, value)
+			}
+		}
+		taskReturns <- lastResult
 	}
 }
 
@@ -129,7 +151,9 @@ func (fexec *FlowExecutor) ExecuteFlow(request []byte) ([]byte, error) {
 		for item := startNodes.Front(); nil != item; item = item.Next() {
 			node := item.Value.(*sdk.Node)
 			startNodeIds = append(startNodeIds, node.Id)
-			go worker(node.Id, taskCh, taskReturnCh, errCh)
+			readTimeout := parseIntOrDurationValue(os.Getenv("read_timeout"), 10*time.Second)
+			workerCtx, _ := context.WithTimeout(fexec.Ctx, readTimeout)
+			go worker(workerCtx, node.Id, taskCh, taskReturnCh, errCh)
 		}
 
 		for item := startNodes.Front(); nil != item; item = item.Next() {
