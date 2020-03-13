@@ -79,6 +79,12 @@ func (dag *Dag) AddV(id string, options ...[]Operation) *Node {
 
 // 新增图的一条边E
 func (dag *Dag) AddE(from string, to string) error {
+	adjList := dag.edges[from]
+	for item := adjList.Front(); nil != item; item = item.Next() {
+		if item.Value == to {
+			return ERR_DUPLICATE_EDGE
+		}
+	}
 	fromNode := dag.nodes[from]
 	if fromNode == nil {
 		fromNode = dag.AddV(from)
@@ -89,12 +95,6 @@ func (dag *Dag) AddE(from string, to string) error {
 		toNode = dag.AddV(to)
 	}
 	toNode.degree(INDEGREE, INCREMENT)
-	adjList := dag.edges[from]
-	for item := adjList.Front(); nil != item; item = item.Next() {
-		if item.Value == to {
-			return ERR_DUPLICATE_EDGE
-		}
-	}
 	adjList.PushBack(to)
 	return nil
 }
