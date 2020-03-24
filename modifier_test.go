@@ -6,6 +6,7 @@ import (
 	"github.com/dafanshu/mini-flow/flow"
 	"github.com/dafanshu/simplejson"
 	"github.com/stretchr/testify/assert"
+	"sync"
 	"testing"
 )
 
@@ -82,8 +83,12 @@ func TestModifer(t *testing.T) {
 	fmt.Println(string(result))
 }
 
-func TestReturnJson(t *testing.T) {
-	fmt.Println(">>>>TestReturnJson")
+func localInvokeSync(t *testing.T, wg *sync.WaitGroup){
+	defer wg.Done()
+	localInvoke(t)
+}
+
+func localInvoke(t *testing.T){
 	workflow := new(flow.Workflow)
 	dag := workflow.NewDag()
 
@@ -132,4 +137,18 @@ func TestReturnJson(t *testing.T) {
 
 	fmt.Println(">>>>>>>>>>")
 	fmt.Println(string(result))
+}
+
+func TestReturnJson(t *testing.T) {
+	fmt.Println(">>>>TestReturnJson")
+	localInvoke(t)
+}
+
+func TestGorun(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go localInvokeSync(t, &wg)
+	go localInvokeSync(t, &wg)
+	go localInvokeSync(t, &wg)
+	wg.Wait()
 }
