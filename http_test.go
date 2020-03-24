@@ -70,3 +70,21 @@ func TestHttp(t *testing.T) {
 
 	fmt.Println(string(result))
 }
+
+func TestPhoenix(t *testing.T) {
+	fmt.Println("ssss")
+	workflow := new(flow.Workflow)
+	dag := workflow.NewDag()
+
+	dag.Node("node4").Request("http://localhost:5002")
+	executor := flow.FlowExecutor{Flow: workflow, Ctx: context.TODO()}
+
+	jsdata, _ := simplejson.NewJson([]byte(`{}`))
+	jsdata.Set("in_foo", "in_bar")
+	jsdata.Set("request-id", "yurui")
+	request, _ := jsdata.MarshalJSON()
+	result, err := executor.ExecuteFlow(request)
+	assert.Equal(t, err, nil)
+
+	fmt.Println(string(result))
+}

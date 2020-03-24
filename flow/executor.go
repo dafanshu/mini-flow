@@ -14,11 +14,10 @@ import (
 	"github.com/dafanshu/simplejson"
 )
 
-var wg sync.WaitGroup
-
 type FlowExecutor struct {
 	Flow *Workflow
 	Ctx  context.Context
+	wg   sync.WaitGroup
 }
 
 type RawRequest struct {
@@ -55,7 +54,7 @@ func parseIntOrDurationValue(val string, fallback time.Duration) time.Duration {
 	return duration
 }
 
-func worker(ctx context.Context, nodeId string, tasks chan *task, taskReturns chan *simplejson.Json, errs chan error) {
+func worker(ctx context.Context, wg *sync.WaitGroup, nodeId string, tasks chan *task, taskReturns chan *simplejson.Json, errs chan error) {
 	defer wg.Done()
 	var sendErr = func(err error) bool {
 		if err == nil {
@@ -143,12 +142,12 @@ func (fexec *FlowExecutor) ExecuteFlow(request []byte) ([]byte, error) {
 
 		startNodeIds := make([]string, 0)
 
-		wg.Add(nodeSize)
+		fexec.wg.Add(nodeSize)
 
 		for item := startNodes.Front(); nil != item; item = item.Next() {
 			node := item.Value.(*sdk.Node)
 			startNodeIds = append(startNodeIds, node.Id)
-			go worker(workerCtx, node.Id, taskCh, taskReturnCh, errCh)
+			go worker(workerCtx, &fexec.wg, node.Id, taskCh, taskReturnCh, errCh)
 		}
 
 		for item := startNodes.Front(); nil != item; item = item.Next() {
@@ -161,7 +160,7 @@ func (fexec *FlowExecutor) ExecuteFlow(request []byte) ([]byte, error) {
 			}
 			taskCh <- &nodeTask
 		}
-		wg.Wait()
+		fexec.wg.Wait()
 		close(taskCh)
 		workflow.RemoveExec(startNodeIds)
 

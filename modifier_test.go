@@ -7,7 +7,6 @@ import (
 	"github.com/dafanshu/simplejson"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
 )
 
 func TestModiferInitData(t *testing.T) {
@@ -110,7 +109,6 @@ func TestReturnJson(t *testing.T) {
 		sub.Set("out_foo_node5", out_foo_node5)
 		sub.Set("out_foo", out_foo)
 
-		time.Sleep(15 * time.Second)
 		result.Set("node_foo", sub)
 		res, _ := result.MarshalJSON()
 		return res, nil
