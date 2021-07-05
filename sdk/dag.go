@@ -42,7 +42,7 @@ func NewDag() *Dag {
 	return dag
 }
 
-// 检查当前图是否符合DAG特性
+// 检查当前图是否符合DAG特性 不建议使用
 func CheckDag(dag *Dag) error {
 	counter := 0
 	startNodes := dag.startV()
@@ -66,6 +66,34 @@ func CheckDag(dag *Dag) error {
 		return ERR_HAS_CIRCLE
 	}
 	return nil
+}
+
+// 检查当前图是否符合DAG特性
+func CheckDagNew(dag *Dag) bool {
+	cnt := 0
+	stack := list.New()
+	initInDegree := make(map[string]int, dag.nodeIndex)
+	for nodeId := range dag.nodes {
+		inDegree := dag.nodes[nodeId].inDegree
+		if inDegree == 0 {
+			stack.PushBack(nodeId)
+		}
+		initInDegree[nodeId] = inDegree
+	}
+	for stack.Len() > 0 {
+		item := stack.Back()
+		stack.Remove(item)
+		cnt++
+		adjList := dag.edges[item.Value.(string)]
+		for item := adjList.Front(); nil != item; item = item.Next() {
+			current := item.Value.(string)
+			initInDegree[current]--
+			if initInDegree[current] == 0 {
+				stack.PushBack(current)
+			}
+		}
+	}
+	return cnt == dag.nodeIndex
 }
 
 // 新增图的一个顶点V
