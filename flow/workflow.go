@@ -67,7 +67,7 @@ func (flow *Workflow) RemoveExec(nodeIds []string) {
 }
 
 //判断DAG图是否有回路
-func (flow *Workflow) IsLegal(nodeIds []string) error {
+func (flow *Workflow) IsLegal() error {
 	legal := flow.uflow.CheckDag()
 	if !legal {
 		return errors.New("DAG has circle")
