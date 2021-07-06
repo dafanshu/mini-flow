@@ -76,7 +76,7 @@ func (flow *Workflow) isLegal(nodeIds []string) error {
 }
 
 // 根据参数使用依赖关系组装DAG图
-func (flow *Workflow) AssembleDag(ins map[string][]string, outs map[string][]string) {
+func (dag *Dag) AssembleDag(ins map[string][]string, outs map[string][]string) {
 	for out := range outs {
 		nodeOut := outs[out]
 		if len(nodeOut) == 0 {
@@ -90,7 +90,7 @@ func (flow *Workflow) AssembleDag(ins map[string][]string, outs map[string][]str
 				}
 				for _, paramIn := range nodeIn {
 					if paramOut == paramIn {
-						flow.uflow.Edge(out, in)
+						dag.Edge(out, in)
 					}
 				}
 			}
