@@ -2,6 +2,8 @@ package flow
 
 import (
 	"container/list"
+	"errors"
+
 	"github.com/dafanshu/mini-flow/sdk"
 )
 
@@ -64,6 +66,38 @@ func (flow *Workflow) RemoveExec(nodeIds []string) {
 	flow.uflow.udag.Remove(nodeIds)
 }
 
+//判断DAG图是否有回路
+func (flow *Workflow) isLegal(nodeIds []string) error {
+	legal := flow.uflow.CheckDag()
+	if !legal {
+		return errors.New("DAG has circle")
+	}
+	return nil
+}
+
+// 根据参数使用依赖关系组装DAG图
+func (flow *Workflow) AssembleDag(ins map[string][]string, outs map[string][]string) {
+	for out := range outs {
+		nodeOut := outs[out]
+		if len(nodeOut) == 0 {
+			continue
+		}
+		for _, paramOut := range nodeOut {
+			for in := range ins {
+				nodeIn := ins[in]
+				if len(nodeIn) == 0 {
+					continue
+				}
+				for _, paramIn := range nodeIn {
+					if paramOut == paramIn {
+						flow.uflow.Edge(out, in)
+					}
+				}
+			}
+		}
+	}
+}
+
 func (dag *Dag) Node(vertex string) *Node {
 	node := dag.udag.GetV(vertex)
 	if node == nil {
@@ -74,6 +108,10 @@ func (dag *Dag) Node(vertex string) *Node {
 
 func (dag *Dag) Edge(from, to string) {
 	dag.udag.AddE(from, to)
+}
+
+func (dag *Dag) CheckDag() bool {
+	return sdk.CheckDag(dag.udag)
 }
 
 func (o *Options) reset() {
