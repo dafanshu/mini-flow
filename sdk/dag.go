@@ -42,34 +42,8 @@ func NewDag() *Dag {
 	return dag
 }
 
-// 检查当前图是否符合DAG特性 不建议使用
-func CheckDag(dag *Dag) error {
-	counter := 0
-	startNodes := dag.startV()
-	for startNodes.Len() > 0 {
-		front := startNodes.Front()
-		startNodes.Remove(front)
-		nodeId := front.Value.(string)
-		delete(dag.nodes, nodeId)
-		counter++
-		adjList := dag.edges[nodeId]
-		for item := adjList.Front(); nil != item; item = item.Next() {
-			node := dag.nodes[item.Value.(string)]
-			node.degree(INDEGREE, DECREMENT)
-			if node.inDegree == 0 {
-				startNodes.PushBack(node.Id)
-			}
-		}
-		delete(dag.edges, nodeId)
-	}
-	if counter != dag.nodeIndex {
-		return ERR_HAS_CIRCLE
-	}
-	return nil
-}
-
 // 检查当前图是否符合DAG特性
-func CheckDagNew(dag *Dag) bool {
+func CheckDag(dag *Dag) bool {
 	cnt := 0
 	stack := list.New()
 	initInDegree := make(map[string]int, dag.nodeIndex)
