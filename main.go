@@ -58,7 +58,7 @@ func main() {
 		fmt.Println(string(request))
 		fmt.Println("____________")
 		return request, nil
-	}).In("foo", "fuck").Out("stdout").Modify(func(data []byte) ([]byte, error) {
+	}).In("foo", "bar").Out("stdout").Modify(func(data []byte) ([]byte, error) {
 		dataMap := make(map[string]interface{})
 		//jsonByte, _ := json.Marshal(param)
 		fmt.Println(string(data))
@@ -79,7 +79,7 @@ func main() {
 	dataMap := make(map[string]string)
 	dataMap["kk"] = "aaaaaaa"
 	dataMap["foo"] = "foooo"
-	dataMap["fuck"] = "fuck"
+	dataMap["bar"] = "bar"
 	request, _ := json.Marshal(dataMap)
 	fmt.Println(string(request))
 	executor := flow.FlowExecutor{Flow: workflow}
